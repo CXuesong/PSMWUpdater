@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using PSMWUpdater.Commands;
 
 namespace PSMWUpdater
 {
-    public class MediaWikiInstallation
+
+    internal class MediaWikiInstallation
     {
 
         public MediaWikiInstallation(string rootPath)
@@ -15,29 +17,29 @@ namespace PSMWUpdater
 
         public string RootPath { get; }
 
-        public IReadOnlyList<GeneralExtensionInfo> InstalledExtensions { get; private set; }
+        public IReadOnlyList<LocalExtensionInfo> InstalledExtensions { get; private set; }
 
-        public IReadOnlyList<GeneralExtensionInfo> InstalledSkins { get; private set; }
-        
+        public IReadOnlyList<LocalExtensionInfo> InstalledSkins { get; private set; }
+
         public void Refresh()
         {
             InstalledExtensions = Directory
-                .EnumerateDirectories(Path.Join(RootPath, "extensions"))
-                .Select(path => new GeneralExtensionInfo(Path.GetFileName(path), path))
-                .ToImmutableList();
+                .EnumerateDirectories(Path.Combine(RootPath, "extensions"))
+                .Select(path => new LocalExtensionInfo(new ExtensionName(Path.GetFileName(path), ExtensionType.Extension), path))
+                .ToList();
             InstalledSkins = Directory
-                .EnumerateDirectories(Path.Join(RootPath, "skins"))
-                .Select(path => new GeneralExtensionInfo(Path.GetFileName(path), path))
-                .ToImmutableList();
+                .EnumerateDirectories(Path.Combine(RootPath, "skins"))
+                .Select(path => new LocalExtensionInfo(new ExtensionName(Path.GetFileName(path), ExtensionType.Skin), path))
+                .ToList();
         }
 
         public static bool CheckMwRootFolder(string path)
         {
-            if (!File.Exists(Path.Join(path, "index.php")))
+            if (!File.Exists(Path.Combine(path, "index.php")))
                 return false;
-            if (!Directory.Exists(Path.Join(path, "extensions")))
+            if (!Directory.Exists(Path.Combine(path, "extensions")))
                 return false;
-            if (!Directory.Exists(Path.Join(path, "skins")))
+            if (!Directory.Exists(Path.Combine(path, "skins")))
                 return false;
             return true;
         }
@@ -47,27 +49,6 @@ namespace PSMWUpdater
         {
             return RootPath;
         }
-    }
-
-    public class GeneralExtensionInfo
-    {
-
-        public GeneralExtensionInfo(string name, string rootPath)
-        {
-            Name = name;
-            IsEmpty = !Directory.EnumerateFiles(rootPath).Any();
-            LastWriteTime = IsEmpty ? DateTimeOffset.MinValue : Directory
-                .EnumerateFiles(rootPath)
-                .Select(fileName => (DateTimeOffset)File.GetLastWriteTime(fileName))
-                .Min();
-        }
-
-        public string Name { get; }
-
-        public DateTimeOffset LastWriteTime { get; }
-
-        public bool IsEmpty { get; }
-
     }
 
 }

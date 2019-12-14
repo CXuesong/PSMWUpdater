@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -10,48 +11,51 @@ using WikiClientLibrary.Sites;
 namespace PSMWUpdater
 {
 
-    [JsonObject]
-    public class ExtensionReposInfo
-    {
-
-        [JsonProperty]
-        public IList<string> Extensions { get; set; }
-
-        [JsonProperty]
-        public IList<string> Skins { get; set; }
-
-    }
-
-    [JsonObject]
-    public class ExtensionBranchesInfo
-    {
-
-        // Version spec -- URL
-
-        [JsonProperty]
-        public IList<IDictionary<string, string>> Extensions { get; set; }
-
-        [JsonProperty]
-        public IList<IDictionary<string, string>> Skins { get; set; }
-
-    }
-
-    public static class WikiSiteExtensions
+    internal static class WikiSiteExtensions
     {
 
         private static readonly JsonSerializer mwJsonSerializer = MediaWikiHelper.CreateWikiJsonSerializer();
 
-        public static async Task<ExtensionReposInfo> GetKnownExtensionsAsync(this WikiSite site, CancellationToken cancellationToken = default)
+        public static async Task<IList<ExtensionName>> GetKnownExtensionsAsync(this WikiSite site, CancellationToken cancellationToken = default)
         {
             if (site == null) throw new ArgumentNullException(nameof(site));
             var response = await site.InvokeMediaWikiApiAsync(
-                new MediaWikiFormRequestMessage(new { action = "query", list = "extdistrepos" }),
+                new MediaWikiFormRequestMessage(new
+                {
+                    action = "query",
+                    list = "extdistrepos"
+                }),
                 cancellationToken);
             var node = response["query"]["extdistrepos"];
-            return node.ToObject<ExtensionReposInfo>(mwJsonSerializer);
+            var extensions = node["extensions"]?.ToObject<IList<string>>() ?? Enumerable.Empty<string>();
+            var skins = node["skins"]?.ToObject<IList<string>>() ?? Enumerable.Empty<string>();
+            return extensions.Select(e => new ExtensionName(e, ExtensionType.Extension))
+                .Concat(skins.Select(s => new ExtensionName(s, ExtensionType.Skin)))
+                .ToList();
         }
 
-        public static async Task
+        private static readonly Dictionary<string, IDictionary<string, string>> emptyDict2 = new Dictionary<string, IDictionary<string, string>>();
+
+        public static async Task<IList<ExtensionBranchInfo>> GetExtensionBranchesAsync(this WikiSite site, IReadOnlyCollection<ExtensionName> names,
+            CancellationToken cancellationToken = default)
+        {
+            if (site == null) throw new ArgumentNullException(nameof(site));
+            var response = await site.InvokeMediaWikiApiAsync(
+                new MediaWikiFormRequestMessage(new
+                {
+                    action = "query",
+                    list = "extdistbranches",
+                    edbexts = names.Where(n => n.Type == ExtensionType.Unknown || n.Type == ExtensionType.Extension),
+                    edbskins = names.Where(n => n.Type == ExtensionType.Unknown || n.Type == ExtensionType.Skin),
+                }),
+                cancellationToken);
+            var node = response["query"]["extdistbranches"];
+            var extensions = node["extensions"]?.ToObject<IDictionary<string, IDictionary<string, string>>>() ?? emptyDict2;
+            var skins = node["skins"]?.ToObject<IDictionary<string, IDictionary<string, string>>>() ?? emptyDict2;
+            return extensions.SelectMany(e => e.Value.Select(b => new ExtensionBranchInfo(new ExtensionName(e.Key, ExtensionType.Extension), b.Key, b.Value)))
+                .Concat(skins.SelectMany(s => s.Value.Select(b => new ExtensionBranchInfo(new ExtensionName(s.Key, ExtensionType.Skin), b.Key, b.Value))))
+                .ToList();
+        }
 
     }
 
