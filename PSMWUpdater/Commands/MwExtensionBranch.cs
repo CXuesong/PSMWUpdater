@@ -29,9 +29,9 @@ namespace PSMWUpdater.Commands
         /// <inheritdoc />
         protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
         {
-            if (Name.Length == 0 || Branch?.Length == 0) return;
+            if (Name.Length == 0) return;
             var batch = new List<ExtensionName>();
-            var branchSet = Branch == null ? null : new HashSet<string>(Branch, StringComparer.OrdinalIgnoreCase);
+            var branchSet = Branch == null || Branch.Length == 0 ? null : new HashSet<string>(Branch, StringComparer.OrdinalIgnoreCase);
             var site = await AmbientServices.GetExtensionProviderSiteAsync();
             async Task ProcessBatchAsync()
             {

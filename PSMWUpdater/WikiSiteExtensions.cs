@@ -45,8 +45,8 @@ namespace PSMWUpdater
                 {
                     action = "query",
                     list = "extdistbranches",
-                    edbexts = names.Where(n => n.Type == ExtensionType.Unknown || n.Type == ExtensionType.Extension),
-                    edbskins = names.Where(n => n.Type == ExtensionType.Unknown || n.Type == ExtensionType.Skin),
+                    edbexts = MediaWikiHelper.JoinValues(names.Where(n => n.Type == ExtensionType.Unknown || n.Type == ExtensionType.Extension)),
+                    edbskins = MediaWikiHelper.JoinValues(names.Where(n => n.Type == ExtensionType.Unknown || n.Type == ExtensionType.Skin)),
                 }),
                 cancellationToken);
             var node = response["query"]["extdistbranches"];
