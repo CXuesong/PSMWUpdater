@@ -19,20 +19,35 @@ namespace PSMWUpdater.Commands
     {
 
         /// <summary>
-        /// If specified, gets all the extensions from the local MediaWiki installation in the specified path.
+        /// If specified, gets all the extensions from the local MediaWiki installation in the specified path,
+        /// instead of retrieving known extensions from server.
         /// </summary>
         [Parameter(Position = 0)]
         public string InstallationPath { get; set; }
 
+        /// <summary>
+        /// Only list extensions of this type.
+        /// </summary>
+        [Parameter]
+        [ValidateSet("All", nameof(ExtensionType.Extension), nameof(ExtensionType.Skin), IgnoreCase = true)]
+        public string Type { get; set; }
+
         /// <inheritdoc />
         protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
         {
+            var filterType = Type == null || "All".Equals(Type, StringComparison.OrdinalIgnoreCase)
+                ? ExtensionType.Unknown
+                : (ExtensionType)Enum.Parse(typeof(ExtensionType), Type, true);
             if (InstallationPath == null)
             {
                 var site = await AmbientServices.GetExtensionProviderSiteAsync();
                 var names = await site.GetKnownExtensionsAsync(cancellationToken);
                 foreach (var name in names)
+                {
+                    if (filterType != ExtensionType.Unknown && name.Type != filterType)
+                        continue;
                     WriteObject(new ExtensionInfo(name));
+                }
             }
             else
             {
@@ -41,8 +56,10 @@ namespace PSMWUpdater.Commands
                     throw new ArgumentException("Specified path is not a valid MediaWiki installation.", nameof(InstallationPath));
                 var installation = new MediaWikiInstallation(resolvedPath);
                 installation.Refresh();
-                WriteObject(installation.InstalledExtensions, true);
-                WriteObject(installation.InstalledSkins, true);
+                if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Extension)
+                    WriteObject(installation.InstalledExtensions, true);
+                if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Skin)
+                    WriteObject(installation.InstalledSkins, true);
             }
         }
     }
