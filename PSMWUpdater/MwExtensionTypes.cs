@@ -28,7 +28,7 @@ namespace PSMWUpdater
         {
             if (string.IsNullOrWhiteSpace(expr)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(expr));
             expr = expr.Trim();
-            var parts = expr.Split(new[] { ';' }, 2);
+            var parts = expr.Split(new[] { ':' }, 2);
             if (parts.Length == 1)
                 return new ExtensionName(parts[0], ExtensionType.Unknown);
             return new ExtensionName(parts[1], (ExtensionType)Enum.Parse(typeof(ExtensionType), parts[0], true));
