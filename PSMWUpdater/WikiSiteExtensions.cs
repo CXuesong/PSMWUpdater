@@ -36,7 +36,7 @@ namespace PSMWUpdater
 
         private static readonly Dictionary<string, IDictionary<string, string>> emptyDict2 = new Dictionary<string, IDictionary<string, string>>();
 
-        public static async Task<IList<ExtensionBranchInfo>> GetExtensionBranchesAsync(this WikiSite site, IReadOnlyCollection<ExtensionName> names,
+        public static async Task<IDictionary<ExtensionName, IList<ExtensionBranchInfo>>> GetExtensionBranchesAsync(this WikiSite site, IReadOnlyCollection<ExtensionName> names,
             CancellationToken cancellationToken = default)
         {
             if (site == null) throw new ArgumentNullException(nameof(site));
@@ -52,9 +52,10 @@ namespace PSMWUpdater
             var node = response["query"]["extdistbranches"];
             var extensions = node["extensions"]?.ToObject<IDictionary<string, IDictionary<string, string>>>() ?? emptyDict2;
             var skins = node["skins"]?.ToObject<IDictionary<string, IDictionary<string, string>>>() ?? emptyDict2;
-            return extensions.SelectMany(e => e.Value.Select(b => new ExtensionBranchInfo(new ExtensionName(e.Key, ExtensionType.Extension), b.Key, b.Value)))
-                .Concat(skins.SelectMany(s => s.Value.Select(b => new ExtensionBranchInfo(new ExtensionName(s.Key, ExtensionType.Skin), b.Key, b.Value))))
-                .ToList();
+            return extensions.Select(e =>
+                    e.Value.Select(b => new ExtensionBranchInfo(new ExtensionName(e.Key, ExtensionType.Extension), b.Key, b.Value)).ToList())
+                .Concat(skins.Select(s => s.Value.Select(b => new ExtensionBranchInfo(new ExtensionName(s.Key, ExtensionType.Skin), b.Key, b.Value)).ToList()))
+                .ToDictionary(e => e.First().ExtensionName, e => (IList<ExtensionBranchInfo>)e);
         }
 
     }

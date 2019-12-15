@@ -14,11 +14,12 @@ namespace PSMWUpdater
         Skin
     }
 
-    public struct ExtensionName
+    public struct ExtensionName : IEquatable<ExtensionName>
     {
 
         public ExtensionName(string name, ExtensionType type)
         {
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("Value cannot be null or empty.", nameof(name));
             Name = name;
             Type = type;
         }
@@ -45,6 +46,36 @@ namespace PSMWUpdater
             return Type + ":" + Name;
         }
 
+        /// <inheritdoc />
+        public bool Equals(ExtensionName other)
+        {
+            return Name == other.Name && Type == other.Type;
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(object obj)
+        {
+            return obj is ExtensionName other && Equals(other);
+        }
+
+        /// <inheritdoc />
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Name.GetHashCode() * 397) ^ (int) Type;
+            }
+        }
+
+        public static bool operator ==(ExtensionName left, ExtensionName right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(ExtensionName left, ExtensionName right)
+        {
+            return !left.Equals(right);
+        }
     }
 
     public class ExtensionInfo
