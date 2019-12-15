@@ -40,6 +40,7 @@ namespace PSMWUpdater.Commands
                 if (!MediaWikiInstallation.CheckMwRootFolder(resolvedPath))
                     throw new ArgumentException("Specified path is not a valid MediaWiki installation.", nameof(InstallationPath));
                 var installation = new MediaWikiInstallation(resolvedPath);
+                installation.Refresh();
                 WriteObject(installation.InstalledExtensions, true);
                 WriteObject(installation.InstalledSkins, true);
             }
