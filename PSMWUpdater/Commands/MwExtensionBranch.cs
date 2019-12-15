@@ -18,7 +18,7 @@ namespace PSMWUpdater.Commands
         /// <summary>
         /// One or more names of the extensions to fetch information.
         /// </summary>
-        [Parameter(Position = 0, Mandatory = true)]
+        [Parameter(Position = 0, Mandatory = true, ValueFromPipeline = true)]
         public ExtensionName[] Name { get; set; }
 
         /// <summary>
