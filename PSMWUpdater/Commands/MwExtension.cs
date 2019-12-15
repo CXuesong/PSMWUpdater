@@ -15,30 +15,31 @@ namespace PSMWUpdater.Commands
     /// </summary>
     [Cmdlet(VerbsCommon.Get, NounsCommon.MwExtension)]
     [OutputType(typeof(ExtensionInfo), typeof(LocalExtensionInfo))]
-    public class GetMwExtensionCommand : AsyncCmdlet
+    public class GetMwExtensionCommand : PSAsyncCmdlet
     {
 
         /// <summary>
         /// If specified, gets all the extensions from the local MediaWiki installation in the specified path.
         /// </summary>
         [Parameter(Position = 0)]
-        public FileInfo InstallationPath { get; set; }
+        public string InstallationPath { get; set; }
 
         /// <inheritdoc />
         protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
         {
-            var site = await AmbientServices.GetExtensionProviderSiteAsync();
             if (InstallationPath == null)
             {
+                var site = await AmbientServices.GetExtensionProviderSiteAsync();
                 var names = await site.GetKnownExtensionsAsync(cancellationToken);
                 foreach (var name in names)
                     WriteObject(new ExtensionInfo(name));
             }
             else
             {
-                if (!MediaWikiInstallation.CheckMwRootFolder(InstallationPath.FullName))
-                    throw new ArgumentException("Specified folder is not a valid MediaWiki installation.", nameof(InstallationPath));
-                var installation = new MediaWikiInstallation(InstallationPath.FullName);
+                var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InstallationPath);
+                if (!MediaWikiInstallation.CheckMwRootFolder(resolvedPath))
+                    throw new ArgumentException("Specified path is not a valid MediaWiki installation.", nameof(InstallationPath));
+                var installation = new MediaWikiInstallation(resolvedPath);
                 WriteObject(installation.InstalledExtensions, true);
                 WriteObject(installation.InstalledSkins, true);
             }

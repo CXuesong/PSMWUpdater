@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace PSMWUpdater.Infrastructures
 {
-    public abstract class AsyncCmdlet : Cmdlet
+    public abstract class PSAsyncCmdlet : PSCmdlet
     {
 
         private CancellationTokenSource cts;

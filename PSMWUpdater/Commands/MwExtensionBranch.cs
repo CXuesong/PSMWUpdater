@@ -12,7 +12,7 @@ namespace PSMWUpdater.Commands
 
     [Cmdlet(VerbsCommon.Get, NounsCommon.MwExtensionBranch)]
     [OutputType(typeof(ExtensionBranchInfo))]
-    public class GetMwExtensionBranch : AsyncCmdlet
+    public class GetMwExtensionBranch : PSAsyncCmdlet
     {
 
         /// <summary>
