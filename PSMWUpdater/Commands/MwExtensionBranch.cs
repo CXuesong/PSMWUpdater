@@ -41,68 +41,84 @@ namespace PSMWUpdater.Commands
         private const string promptNoMatchingRelBranch = "No matching REL branch for extension \"{0}\". Available branches: {1}.";
         private const string promptNoBranch = "No branch found for extension \"{0}\".";
 
+        private HashSet<ExtensionName> batch;
+
+        /// <inheritdoc />
+        protected override void BeginProcessing()
+        {
+            base.BeginProcessing();
+            batch = new HashSet<ExtensionName>();
+        }
+
+        private async Task ProcessBatchAsync(CancellationToken cancellationToken)
+        {
+            var site = await AmbientServices.GetExtensionProviderSiteAsync();
+            var branchSet = Branch == null ? null : new HashSet<string>(Branch, StringComparer.OrdinalIgnoreCase);
+            var branches = await site.GetExtensionBranchesAsync(batch, cancellationToken);
+            foreach (var p in branches)
+            {
+                var extensionBranches = p.Value;
+                if (AllBranches)
+                {
+                    if (branchSet != null)
+                        extensionBranches = p.Value.Where(b => branchSet.Contains(b.BranchName)).ToList();
+                    if (extensionBranches.Count > 0)
+                        WriteObject(extensionBranches, true);
+                    else
+                        WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                }
+                else if (Branch != null)
+                {
+                    var matchingBranch = Branch.Select(bn => extensionBranches.FirstOrDefault(b1 => b1.BranchName == bn)).FirstOrDefault(b => b != null);
+                    if (matchingBranch != null)
+                        WriteObject(matchingBranch);
+                    else
+                        WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                }
+                else
+                {
+                    // Find latest REL branch.
+                    var latestRel = extensionBranches
+                        .Where(b => b.BranchName.StartsWith("REL", StringComparison.Ordinal))
+                        .OrderByDescending(b => b.BranchName)
+                        .FirstOrDefault();
+                    if (latestRel != null)
+                        WriteObject(latestRel);
+                    else
+                        WriteWarning(string.Format(promptNoMatchingRelBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                }
+                batch.Remove(p.Key);
+                batch.Remove(new ExtensionName(p.Key.Name, ExtensionType.Unknown));
+            }
+            foreach (var name in batch)
+            {
+                WriteWarning(string.Format(promptNoBranch, name));
+            }
+        }
+
         /// <inheritdoc />
         protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
         {
             if (Name == null || Name.Length == 0 || Branch != null && Branch.Length == 0) return;
-            var batch = new HashSet<ExtensionName>();
-            var branchSet = Branch == null ? null : new HashSet<string>(Branch, StringComparer.OrdinalIgnoreCase);
-            var site = await AmbientServices.GetExtensionProviderSiteAsync();
-            async Task ProcessBatchAsync()
-            {
-                var branches = await site.GetExtensionBranchesAsync(batch, cancellationToken);
-                foreach (var p in branches)
-                {
-                    var extensionBranches = p.Value;
-                    if (AllBranches)
-                    {
-                        if (branchSet != null)
-                            extensionBranches = p.Value.Where(b => branchSet.Contains(b.BranchName)).ToList();
-                        if (extensionBranches.Count > 0)
-                            WriteObject(extensionBranches, true);
-                        else
-                            WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
-                    }
-                    else if (Branch != null)
-                    {
-                        var matchingBranch = Branch.Select(bn => extensionBranches.FirstOrDefault(b1 => b1.BranchName == bn)).FirstOrDefault(b => b != null);
-                        if (matchingBranch != null)
-                            WriteObject(matchingBranch);
-                        else
-                            WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
-                    }
-                    else
-                    {
-                        // Find latest REL branch.
-                        var latestRel = extensionBranches
-                            .Where(b => b.BranchName.StartsWith("REL", StringComparison.Ordinal))
-                            .OrderByDescending(b => b.BranchName)
-                            .FirstOrDefault();
-                        if (latestRel != null)
-                            WriteObject(latestRel);
-                        else
-                            WriteWarning(string.Format(promptNoMatchingRelBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
-                    }
-                    batch.Remove(p.Key);
-                    batch.Remove(new ExtensionName(p.Key.Name, ExtensionType.Unknown));
-                }
-                foreach (var name in batch)
-                {
-                    WriteWarning(string.Format(promptNoBranch, name));
-                }
-            }
             foreach (var n in Name)
             {
                 batch.Add(n);
                 if (batch.Count >= 30)
                 {
-                    await ProcessBatchAsync();
+                    await ProcessBatchAsync(cancellationToken);
                     batch.Clear();
                 }
             }
-            if (batch.Count > 0)
-                await ProcessBatchAsync();
         }
+
+        /// <inheritdoc />
+        protected override async Task EndProcessingAsync(CancellationToken cancellationToken)
+        {
+            if (batch.Count > 0)
+                await ProcessBatchAsync(cancellationToken);
+            batch = null;
+        }
+
     }
 
 }

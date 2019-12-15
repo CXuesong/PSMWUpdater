@@ -1,4 +1,5 @@
-﻿using System.Management.Automation;
+﻿using System;
+using System.Management.Automation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,21 +10,14 @@ namespace PSMWUpdater.Infrastructures
 
         private CancellationTokenSource cts;
 
-        /// <inheritdoc />
-        protected override void BeginProcessing()
-        {
-            cts = new CancellationTokenSource();
-        }
-
-        /// <inheritdoc />
-        protected sealed override void ProcessRecord()
+        private void RunAsync(Func<Task> taskFunc)
         {
             using (var syncContext = new QueueSynchronizationContext())
             {
                 SynchronizationContext.SetSynchronizationContext(syncContext);
                 try
                 {
-                    var task = ProcessRecordAsync(cts.Token);
+                    var task = taskFunc();
                     using (var syncCts = new CancellationTokenSource())
                     {
                         task.ContinueWith(t => syncCts.Cancel(), syncCts.Token);
@@ -39,19 +33,37 @@ namespace PSMWUpdater.Infrastructures
         }
 
         /// <inheritdoc />
+        protected override void BeginProcessing()
+        {
+            cts = new CancellationTokenSource();
+        }
+
+        /// <inheritdoc />
+        protected sealed override void ProcessRecord()
+        {
+            RunAsync(() => ProcessRecordAsync(cts.Token));
+        }
+
+        /// <inheritdoc />
         protected sealed override void StopProcessing()
         {
             cts.Cancel();
         }
 
         /// <inheritdoc />
-        protected override void EndProcessing()
+        protected sealed override void EndProcessing()
         {
+            RunAsync(() => EndProcessingAsync(cts.Token));
             cts.Dispose();
             cts = null;
         }
 
         protected abstract Task ProcessRecordAsync(CancellationToken cancellationToken);
+
+        protected virtual Task EndProcessingAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
 
     }
 }
