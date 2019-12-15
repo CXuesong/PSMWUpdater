@@ -13,8 +13,14 @@ Describe PSMWUpdater {
         $Extensions | % { $_.Name.Type } | Should -Contain "Skin"
     }
 
-    It FetchRemoteExtensionBranches {
-        $Branches = Get-MwExtensionBranch Echo
+    It FetchLatestRemoteExtensionBranches {
+        $Branches = Get-MwExtensionBranch -Name Echo, Vector, Extension:AbuseFilter, Skin:Timeless
+        $Branches.Length | Should -Be 4
+        $Branches | % { $_.BranchName.StartsWith("REL1_") } | Should -Not -Contain $false
+    }
+
+    It FetchAllRemoteExtensionBranches {
+        $Branches = Get-MwExtensionBranch Echo -AllBranches
         $Branches.Length | Should -BeIn (3..6)
         $Branches | % { $_.BranchName } | Should -Contain "master"
         $Branches | % { $_.BranchName } | Should -Contain "source"
