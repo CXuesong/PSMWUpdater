@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using PSMWUpdater.Infrastructures;
+using WikiClientLibrary.Pages;
 using WikiClientLibrary.Pages.Queries.Properties;
 
 namespace PSMWUpdater.Commands
@@ -38,6 +40,13 @@ namespace PSMWUpdater.Commands
         [Parameter]
         public SwitchParameter AllBranches { get; set; }
 
+        /// <summary>
+        /// Whether to suppress the attempt to look for extension redirects
+        /// (e.g. SyntaxHighlight --> SyntaxHighlight GeSHi).
+        /// </summary>
+        [Parameter]
+        public SwitchParameter SuppressRedirect { get; set; }
+
         private const string promptNoMatchingBranch = "No matching branch for extension \"{0}\". Available branches: {1}.";
         private const string promptNoMatchingRelBranch = "No matching REL branch for extension \"{0}\". Available branches: {1}.";
         private const string promptNoBranch = "No branch found for extension \"{0}\".";
@@ -68,53 +77,119 @@ namespace PSMWUpdater.Commands
             }
         }
 
+        private static readonly Regex mwExtensionDownloadNameMatcher = new Regex(@"{{WikimediaDownload\|(.+?)}}", RegexOptions.IgnoreCase);
+        private static readonly Regex mwSkinDownloadNameMatcher = new Regex(@"{{WikimediaDownloadSkin\|(.+?)}}", RegexOptions.IgnoreCase);
+
         private async Task ProcessBatchAsync(CancellationToken cancellationToken)
         {
             var batchProgress = new ProgressRecord(2, "MediaWiki connection", "Connecting to server.");
             WriteProgress(batchProgress);
             var site = await AmbientServices.GetExtensionProviderSiteAsync();
             batchProgress.StatusDescription = "Fetching extension information.";
-            batchProgress.PercentComplete = 50;
+            batchProgress.PercentComplete = 30;
             WriteProgress(batchProgress);
             var branchSet = Branch == null ? null : new HashSet<string>(Branch, StringComparer.OrdinalIgnoreCase);
             var branches = await site.GetExtensionBranchesAsync(batch, cancellationToken);
             batchProgress.StatusDescription = "Processing response.";
-            batchProgress.PercentComplete = 90;
+            batchProgress.PercentComplete = 60;
             WriteProgress(batchProgress);
-            foreach (var p in branches)
+            ProcessResult();
+
+            void ProcessResult()
             {
-                var extensionBranches = p.Value;
-                if (AllBranches)
+                foreach (var p in branches)
                 {
-                    if (branchSet != null)
-                        extensionBranches = p.Value.Where(b => branchSet.Contains(b.BranchName)).ToList();
-                    if (extensionBranches.Count > 0)
-                        WriteObject(extensionBranches, true);
+                    var extensionBranches = p.Value;
+                    if (AllBranches)
+                    {
+                        if (branchSet != null)
+                            extensionBranches = p.Value.Where(b => branchSet.Contains(b.BranchName)).ToList();
+                        if (extensionBranches.Count > 0)
+                            WriteObject(extensionBranches, true);
+                        else
+                            WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                    }
+                    else if (Branch != null)
+                    {
+                        var matchingBranch = Branch.Select(bn => extensionBranches.FirstOrDefault(b1 => b1.BranchName == bn)).FirstOrDefault(b => b != null);
+                        if (matchingBranch != null)
+                            WriteObject(matchingBranch);
+                        else
+                            WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                    }
                     else
-                        WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                    {
+                        // Find latest REL branch.
+                        var latestRel = extensionBranches
+                            .Where(b => b.BranchName.StartsWith("REL", StringComparison.Ordinal))
+                            .OrderByDescending(b => b.BranchName)
+                            .FirstOrDefault();
+                        if (latestRel != null)
+                            WriteObject(latestRel);
+                        else
+                            WriteWarning(string.Format(promptNoMatchingRelBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                    }
+                    batch.Remove(p.Key);
+                    batch.Remove(new ExtensionName(p.Key.Name, ExtensionType.Unknown));
                 }
-                else if (Branch != null)
+            }
+
+            if (batch.Count > 0 && !SuppressRedirect)
+            {
+                batchProgress.StatusDescription = $"Look for extension redirects ({batch.Count}).";
+                batchProgress.PercentComplete = 60;
+                WriteProgress(batchProgress);
+                var names = new List<ExtensionName>();
+                foreach (var name in batch)
                 {
-                    var matchingBranch = Branch.Select(bn => extensionBranches.FirstOrDefault(b1 => b1.BranchName == bn)).FirstOrDefault(b => b != null);
-                    if (matchingBranch != null)
-                        WriteObject(matchingBranch);
+                    if (name.Type == ExtensionType.Unknown)
+                    {
+                        names.Add(new ExtensionName(name.Name, ExtensionType.Extension));
+                        names.Add(new ExtensionName(name.Name, ExtensionType.Skin));
+                    }
                     else
-                        WriteWarning(string.Format(promptNoMatchingBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                    {
+                        names.Add(name);
+                    }
                 }
-                else
+                var pages = names.Select(n => (OriginalName: n, Page: new WikiPage(site, n.ToString()))).ToList();
+                await pages.Select(t => t.Page).RefreshAsync(PageQueryOptions.FetchContent | PageQueryOptions.ResolveRedirects, cancellationToken);
+                batchProgress.StatusDescription = $"Look for extension redirects ({batch.Count}).";
+                batchProgress.PercentComplete = 70;
+                WriteProgress(batchProgress);
+                var redirectedNames = new HashSet<ExtensionName>();
+                foreach (var (originalName, page) in pages)
                 {
-                    // Find latest REL branch.
-                    var latestRel = extensionBranches
-                        .Where(b => b.BranchName.StartsWith("REL", StringComparison.Ordinal))
-                        .OrderByDescending(b => b.BranchName)
-                        .FirstOrDefault();
-                    if (latestRel != null)
-                        WriteObject(latestRel);
-                    else
-                        WriteWarning(string.Format(promptNoMatchingRelBranch, p.Key, string.Join(", ", p.Value.Select(b => b.BranchName))));
+                    var match = mwExtensionDownloadNameMatcher.Match(page.Content);
+                    if (match.Success)
+                    {
+                        var name = new ExtensionName(match.Groups[1].Value.Trim(), ExtensionType.Extension);
+                        WriteWarning($"Redirected {originalName} to {name}.");
+                        batch.Remove(originalName);
+                        redirectedNames.Add(name);
+                    }
+                    match = mwSkinDownloadNameMatcher.Match(page.Content);
+                    if (match.Success)
+                    {
+                        var name = new ExtensionName(match.Groups[1].Value.Trim(), ExtensionType.Skin);
+                        WriteWarning($"Redirected {originalName} to {name}.");
+                        batch.Remove(originalName);
+                        redirectedNames.Add(name);
+                    }
                 }
-                batch.Remove(p.Key);
-                batch.Remove(new ExtensionName(p.Key.Name, ExtensionType.Unknown));
+                if (redirectedNames.Count > 0)
+                {
+                    batchProgress.StatusDescription = $"Fetching {redirectedNames.Count} extensions.";
+                    batchProgress.PercentComplete = 80;
+                    WriteProgress(batchProgress);
+                    branches = await site.GetExtensionBranchesAsync(redirectedNames, cancellationToken);
+                    foreach (var n in redirectedNames)
+                        batch.Add(n);
+                    batchProgress.StatusDescription = "Processing response.";
+                    batchProgress.PercentComplete = 90;
+                    WriteProgress(batchProgress);
+                    ProcessResult();
+                }
             }
             foreach (var name in batch)
             {
