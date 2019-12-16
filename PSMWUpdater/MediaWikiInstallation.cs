@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using PSMWUpdater.Commands;
+using System.Management.Automation;
+using Newtonsoft.Json.Linq;
 
 namespace PSMWUpdater
 {
@@ -21,15 +22,47 @@ namespace PSMWUpdater
 
         public IReadOnlyList<LocalExtensionInfo> InstalledSkins { get; private set; }
 
-        public void Refresh()
+        private static LocalExtensionInfo SelectExtensionInfo(Cmdlet owner, ExtensionType type, string path)
         {
-            InstalledExtensions = Directory
-                .EnumerateDirectories(Path.Combine(RootPath, "extensions"))
-                .Select(path => new LocalExtensionInfo(new ExtensionName(Path.GetFileName(path), ExtensionType.Extension), path))
+            var extensionJsonPath = Path.Combine(path, "extension.json");
+            if (!File.Exists(extensionJsonPath))
+            {
+                owner.WriteVerbose($"{path}: Cannot find extension.json.");
+                return null;
+            }
+            var extensionManifest = JObject.Parse(File.ReadAllText(extensionJsonPath));
+            // Some extensions, like CLDR, uses different folder name (Cldr)
+            var name = (string)extensionManifest["name"];
+            return new LocalExtensionInfo(new ExtensionName(string.IsNullOrEmpty(name) ? Path.GetFileName(path) : name, type), path);
+        }
+
+        public void RefreshExtensions(Cmdlet owner)
+        {
+            var dirs = Directory.GetDirectories(Path.Combine(RootPath, "extensions"));
+            InstalledExtensions = dirs.Select((path, i) =>
+                {
+                    owner.WriteProgress(new ProgressRecord(10, "Enumerate local MediaWiki extensions", $"Processed folders: {i + 1}/{dirs.Length}: {Path.GetFileName(path)}")
+                    {
+                        PercentComplete = (int)((i + 1) * 100.0 / dirs.Length)
+                    });
+                    return SelectExtensionInfo(owner, ExtensionType.Extension, path);
+                })
+                .Where(i => i != null)
                 .ToList();
-            InstalledSkins = Directory
-                .EnumerateDirectories(Path.Combine(RootPath, "skins"))
-                .Select(path => new LocalExtensionInfo(new ExtensionName(Path.GetFileName(path), ExtensionType.Skin), path))
+        }
+
+        public void RefreshSkins(Cmdlet owner)
+        {
+            var dirs = Directory.GetDirectories(Path.Combine(RootPath, "skins"));
+            InstalledSkins = dirs.Select((path, i) =>
+                {
+                    owner.WriteProgress(new ProgressRecord(10, "Enumerate local MediaWiki skins", $"Processed folders: {i + 1}/{dirs.Length}: {Path.GetFileName(path)}")
+                    {
+                        PercentComplete = (int)((i + 1) * 100.0 / dirs.Length)
+                    });
+                    return SelectExtensionInfo(owner, ExtensionType.Skin, path);
+                })
+                .Where(i => i != null)
                 .ToList();
         }
 

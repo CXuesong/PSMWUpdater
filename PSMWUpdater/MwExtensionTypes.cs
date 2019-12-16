@@ -90,25 +90,38 @@ namespace PSMWUpdater
 
     }
 
+    /// <summary>
+    /// Contains information about an extension that is installed locally.
+    /// </summary>
     public class LocalExtensionInfo : ExtensionInfo
     {
 
         internal LocalExtensionInfo(ExtensionName name, string rootPath)
             : base(name)
         {
-            IsEmpty = !Directory.EnumerateFiles(rootPath).Any();
-            LastWriteTime = IsEmpty ? DateTimeOffset.MinValue : Directory
+            LocalPath = rootPath;
+            LastWriteTime = Directory
                 .EnumerateFiles(rootPath)
                 .Select(fileName => (DateTimeOffset)File.GetLastWriteTime(fileName))
-                .Min();
+                .DefaultIfEmpty(DateTimeOffset.MinValue)
+                .Max();
         }
 
-        public DateTimeOffset LastWriteTime { get; }
+        /// <summary>
+        /// Local path of the extension root folder.
+        /// </summary>
+        public string LocalPath { get; }
 
-        public bool IsEmpty { get; }
+        /// <summary>
+        /// Max last write time.
+        /// </summary>
+        public DateTimeOffset LastWriteTime { get; }
 
     }
 
+    /// <summary>
+    /// Describe a specific branch of an MediaWiki extension.
+    /// </summary>
     public class ExtensionBranchInfo
     {
         public ExtensionBranchInfo(ExtensionName extensionName, string branchName, string url)
