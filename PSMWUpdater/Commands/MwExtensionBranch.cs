@@ -160,6 +160,8 @@ namespace PSMWUpdater.Commands
                 var redirectedNames = new HashSet<ExtensionName>();
                 foreach (var (originalName, page) in pages)
                 {
+                    WriteVerbose($"Failed to find extension redirect for {originalName}.");
+                    if (!page.Exists) continue;
                     var match = mwExtensionDownloadNameMatcher.Match(page.Content);
                     if (match.Success)
                     {
