@@ -24,13 +24,14 @@ namespace PSMWUpdater
 
         private static LocalExtensionInfo SelectExtensionInfo(Cmdlet owner, ExtensionType type, string path)
         {
-            var extensionJsonPath = Path.Combine(path, "extension.json");
-            if (!File.Exists(extensionJsonPath))
+            var manifestName = type == ExtensionType.Extension ? "extension.json" : "skin.json";
+            var manifestPath = Path.Combine(path, manifestName);
+            if (!File.Exists(manifestPath))
             {
-                owner.WriteVerbose($"{path}: Cannot find extension.json.");
+                owner.WriteVerbose($"{path}: Cannot find {manifestName}.");
                 return null;
             }
-            var extensionManifest = JObject.Parse(File.ReadAllText(extensionJsonPath));
+            var extensionManifest = JObject.Parse(File.ReadAllText(manifestPath));
             // Some extensions, like CLDR, uses different folder name (Cldr)
             var name = (string)extensionManifest["name"];
             return new LocalExtensionInfo(new ExtensionName(string.IsNullOrEmpty(name) ? Path.GetFileName(path) : name, type), path);
