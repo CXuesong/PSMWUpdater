@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using PSMWUpdater.Infrastructures;
+using WikiClientLibrary.Pages.Queries.Properties;
 
 namespace PSMWUpdater.Commands
 {
@@ -42,19 +43,44 @@ namespace PSMWUpdater.Commands
         private const string promptNoBranch = "No branch found for extension \"{0}\".";
 
         private HashSet<ExtensionName> batch;
+        private int currentBatchCounter = 0;
+        private int inputCounter;
+        private int processedCounter;
+        private ProgressRecord progress;
 
         /// <inheritdoc />
         protected override void BeginProcessing()
         {
             base.BeginProcessing();
             batch = new HashSet<ExtensionName>();
+            inputCounter = processedCounter = 0;
+            progress = new ProgressRecord(1, "Get MediaWiki extension branch information", "Waiting input.");
+            WriteProgress(progress);
+        }
+
+        private void UpdateProgress()
+        {
+            if (inputCounter > 0)
+            {
+                progress.StatusDescription = $"Processed {processedCounter}/{inputCounter}";
+                progress.PercentComplete = (int)(processedCounter * 100.0 / inputCounter);
+                WriteProgress(progress);
+            }
         }
 
         private async Task ProcessBatchAsync(CancellationToken cancellationToken)
         {
+            var batchProgress = new ProgressRecord(2, "MediaWiki connection", "Connecting to server.");
+            WriteProgress(batchProgress);
             var site = await AmbientServices.GetExtensionProviderSiteAsync();
+            batchProgress.StatusDescription = "Fetching extension information.";
+            batchProgress.PercentComplete = 50;
+            WriteProgress(batchProgress);
             var branchSet = Branch == null ? null : new HashSet<string>(Branch, StringComparer.OrdinalIgnoreCase);
             var branches = await site.GetExtensionBranchesAsync(batch, cancellationToken);
+            batchProgress.StatusDescription = "Processing response.";
+            batchProgress.PercentComplete = 90;
+            WriteProgress(batchProgress);
             foreach (var p in branches)
             {
                 var extensionBranches = p.Value;
@@ -94,19 +120,27 @@ namespace PSMWUpdater.Commands
             {
                 WriteWarning(string.Format(promptNoBranch, name));
             }
+            batchProgress.PercentComplete = 100;
+            WriteProgress(batchProgress);
         }
 
         /// <inheritdoc />
         protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
         {
             if (Name == null || Name.Length == 0 || Branch != null && Branch.Length == 0) return;
+            inputCounter += Name.Length;
+            UpdateProgress();
             foreach (var n in Name)
             {
                 batch.Add(n);
+                currentBatchCounter++;
                 if (batch.Count >= 30)
                 {
                     await ProcessBatchAsync(cancellationToken);
                     batch.Clear();
+                    processedCounter += currentBatchCounter;
+                    currentBatchCounter = 0;
+                    UpdateProgress();
                 }
             }
         }
@@ -114,8 +148,10 @@ namespace PSMWUpdater.Commands
         /// <inheritdoc />
         protected override async Task EndProcessingAsync(CancellationToken cancellationToken)
         {
+            processedCounter += currentBatchCounter;
             if (batch.Count > 0)
                 await ProcessBatchAsync(cancellationToken);
+            UpdateProgress();
             batch = null;
         }
 

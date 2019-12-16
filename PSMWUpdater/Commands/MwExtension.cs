@@ -30,13 +30,6 @@ namespace PSMWUpdater.Commands
         public string InstallationPath { get; set; }
 
         /// <summary>
-        /// When retrieving extensions from local installation, excludes empty folders.
-        /// </summary>
-        [Parameter(ParameterSetName = "Local")]
-        [Parameter(ParameterSetName = "LocalName")]
-        public SwitchParameter NoEmpty { get; set; }
-
-        /// <summary>
         /// Return bare <see cref="ExtensionName"/> instead of <see cref="LocalExtensionInfo"/>-derived class.
         /// </summary>
         [Parameter(Mandatory = true, ParameterSetName = "LocalName")]
@@ -68,14 +61,30 @@ namespace PSMWUpdater.Commands
             }
             if (InstallationPath == null)
             {
+                var progress = new ProgressRecord(1, "Get MediaWiki extension inventory", "Connecting to server.");
+                WriteProgress(progress);
                 var site = await AmbientServices.GetExtensionProviderSiteAsync();
+                progress.StatusDescription = "Fetching extensions.";
+                progress.PercentComplete = 30;
+                WriteProgress(progress);
                 var names = await site.GetKnownExtensionsAsync(cancellationToken);
+                progress.StatusDescription = "Processing response.";
+                progress.PercentComplete = 60;
+                WriteProgress(progress);
+                var processedCount = 0;
                 foreach (var name in names)
                 {
+                    processedCount++;
                     if (filterType != ExtensionType.Unknown && name.Type != filterType)
                         continue;
                     WriteObject(SelectResult(new ExtensionInfo(name)));
+                    progress.PercentComplete = 60 + (int)(40.0*processedCount/names.Count);
+                    progress.StatusDescription = $"Outputting response: {processedCount}/{names.Count}";
+                    WriteProgress(progress);
                 }
+                progress.StatusDescription = "Completed.";
+                progress.PercentComplete = 100;
+                WriteProgress(progress);
             }
             else
             {
@@ -83,16 +92,16 @@ namespace PSMWUpdater.Commands
                 if (!MediaWikiInstallation.CheckMwRootFolder(resolvedPath))
                     throw new ArgumentException("Specified path is not a valid MediaWiki installation.", nameof(InstallationPath));
                 var installation = new MediaWikiInstallation(resolvedPath);
-                installation.Refresh();
-                bool FilterExtension(LocalExtensionInfo e)
-                {
-                    if (NoEmpty && e.IsEmpty) return false;
-                    return true;
-                }
                 if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Extension)
-                    WriteObject(installation.InstalledExtensions.Where(FilterExtension).Select(SelectResult), true);
+                {
+                    installation.RefreshExtensions(this);
+                    WriteObject(installation.InstalledExtensions.Select(SelectResult), true);
+                }
                 if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Skin)
-                    WriteObject(installation.InstalledSkins.Where(FilterExtension).Select(SelectResult), true);
+                {
+                    installation.RefreshSkins(this);
+                    WriteObject(installation.InstalledSkins.Select(SelectResult), true);
+                }
             }
         }
     }
