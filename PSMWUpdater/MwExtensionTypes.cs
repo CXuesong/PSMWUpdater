@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Management.Automation.Runspaces;
 using System.Text;
 
 namespace PSMWUpdater
@@ -63,7 +64,7 @@ namespace PSMWUpdater
         {
             unchecked
             {
-                return (Name.GetHashCode() * 397) ^ (int) Type;
+                return (Name.GetHashCode() * 397) ^ (int)Type;
             }
         }
 
@@ -96,10 +97,14 @@ namespace PSMWUpdater
     public class LocalExtensionInfo : ExtensionInfo
     {
 
-        internal LocalExtensionInfo(ExtensionName name, string rootPath)
+        internal LocalExtensionInfo(ExtensionName name, string rootPath, string branch, string version, string revision, DateTime revisionTime)
             : base(name)
         {
             LocalPath = rootPath;
+            Branch = branch;
+            Version = version;
+            Revision = revision;
+            RevisionTime = revisionTime;
             LastWriteTime = Directory
                 .EnumerateFiles(rootPath)
                 .Select(fileName => (DateTimeOffset)File.GetLastWriteTime(fileName))
@@ -111,6 +116,14 @@ namespace PSMWUpdater
         /// Local path of the extension root folder.
         /// </summary>
         public string LocalPath { get; }
+
+        public string Branch { get; }
+
+        public string Version { get; }
+
+        public string Revision { get; }
+
+        public DateTime RevisionTime { get; }
 
         /// <summary>
         /// Max last write time.
@@ -124,6 +137,7 @@ namespace PSMWUpdater
     /// </summary>
     public class ExtensionBranchInfo
     {
+
         public ExtensionBranchInfo(ExtensionName extensionName, string branchName, string url)
         {
             ExtensionName = extensionName;

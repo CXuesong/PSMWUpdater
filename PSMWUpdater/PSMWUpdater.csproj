@@ -30,9 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="PSMWUpdater.psd1">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <ContentWithTargetPath Include="Assets\**\*" CopyToOutputDirectory="Always" TargetPath="%(RecursiveDir)\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
