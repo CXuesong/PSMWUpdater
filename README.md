@@ -4,7 +4,7 @@
 
 This PowerShell Core Module provides helper cmdlets helping you to upgrade MediaWiki and its extensions.
 
-PowerShell Gallery: [PSMWUpdater](https://www.powershellgallery.com/packages/PSMWUpdater/) ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/PSMWUpdater)
+PowerShell Gallery: [PSMWUpdater](https://www.powershellgallery.com/packages/PSMWUpdater/) ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/PSMWUpdater?style=flat-square)
 
 ## Usage
 
@@ -35,38 +35,39 @@ PS> Help Get-MwExtension
 
 ### Query for extensions and skins
 
-You may query for your current installed extension and skins with
+You may query for your current installed extension and skins with `Get-MwExtension`. For extensions downloaded from MediaWiki [`Special:ExtensionDistributor`](https://www.mediawiki.org/wiki/Special:ExtensionDistributor), you can see the branch and (SVC) revision information.
 
 ```powershell
-PS> Get-MwExtension ./mediawiki-1.33.0/
+PS> Get-MwExtension /mnt/x/mediawiki-1.33.0/
 
-LastWriteTime              IsEmpty Name
--------------              ------- ----
-6/8/19 1:02:17 AM +08:00     False Extension:CategoryTree
-12/13/18 7:35:19 AM +08:00   False Extension:Cite
-12/13/18 7:35:19 AM +08:00   False Extension:CiteThisPage
-6/8/19 1:02:18 AM +08:00     False Extension:CodeEditor
-12/13/18 7:35:21 AM +08:00   False Extension:ConfirmEdit
-12/13/18 7:35:27 AM +08:00   False Extension:Gadgets
-12/13/18 7:35:29 AM +08:00   False Extension:ImageMap
-12/13/18 7:35:29 AM +08:00   False Extension:InputBox
-12/13/18 7:35:29 AM +08:00   False Extension:Interwiki
-12/13/18 7:35:32 AM +08:00   False Extension:LocalisationUpdate
-6/8/19 1:02:20 AM +08:00     False Extension:MultimediaViewer
-12/13/18 7:35:34 AM +08:00   False Extension:Nuke
-6/8/19 1:02:20 AM +08:00     False Extension:OATHAuth
-6/8/19 1:02:20 AM +08:00     False Extension:ParserFunctions
-12/13/18 7:35:36 AM +08:00   False Extension:PdfHandler
-12/13/18 7:35:36 AM +08:00   False Extension:Poem
-12/13/18 7:35:38 AM +08:00   False Extension:Renameuser
-6/8/19 1:02:21 AM +08:00     False Extension:ReplaceText
-12/13/18 7:35:39 AM +08:00   False Extension:SpamBlacklist
-12/13/18 7:35:40 AM +08:00   False Extension:SyntaxHighlight_GeSHi
-12/13/18 7:35:41 AM +08:00   False Extension:TitleBlacklist
-12/13/18 7:36:08 AM +08:00   False Extension:WikiEditor
-12/13/18 7:36:23 AM +08:00   False Skin:MonoBook
-7/2/19 9:32:51 PM +08:00     False Skin:Timeless
-12/13/18 7:36:23 AM +08:00   False Skin:Vector
+Name                           Branch   Version  Revision RevisionTime              LocalPath
+----                           ------   -------  -------- ------------              ---------
+Extension:CategoryTree                                                              /mnt/x/mediawiki-1.33.0/extensions/CategoryTree
+Extension:Cite                          1.0.0                                       /mnt/x/mediawiki-1.33.0/extensions/Cite
+Extension:CiteThisPage                                                              /mnt/x/mediawiki-1.33.0/extensions/CiteThisPage
+Extension:CodeEditor                                                                /mnt/x/mediawiki-1.33.0/extensions/CodeEditor
+Extension:ConfirmEdit                   1.6.0                                       /mnt/x/mediawiki-1.33.0/extensions/ConfirmEdit
+Extension:Gadgets                                                                   /mnt/x/mediawiki-1.33.0/extensions/Gadgets
+Extension:ImageMap                                                                  /mnt/x/mediawiki-1.33.0/extensions/ImageMap
+Extension:InputBox                      0.3.0                                       /mnt/x/mediawiki-1.33.0/extensions/InputBox
+Extension:intersection         REL1_33  1.7.0    05edc37  2019/6/17 PM7:24:11       /mnt/x/mediawiki-1.33.0/extensions/intersection
+Extension:Interwiki                     3.1 201…                                    /mnt/x/mediawiki-1.33.0/extensions/Interwiki
+Extension:LocalisationUpdate            1.4.0                                       /mnt/x/mediawiki-1.33.0/extensions/LocalisationUpdate
+Extension:MultimediaViewer                                                          /mnt/x/mediawiki-1.33.0/extensions/MultimediaViewer
+Extension:Nuke                          1.3.0                                       /mnt/x/mediawiki-1.33.0/extensions/Nuke
+Extension:OATHAuth                      0.2.2                                       /mnt/x/mediawiki-1.33.0/extensions/OATHAuth
+Extension:ParserFunctions               1.6.0                                       /mnt/x/mediawiki-1.33.0/extensions/ParserFunctions
+Extension:PdfHandler                                                                /mnt/x/mediawiki-1.33.0/extensions/PdfHandler
+Extension:Poem                                                                      /mnt/x/mediawiki-1.33.0/extensions/Poem
+Extension:Renameuser                                                                /mnt/x/mediawiki-1.33.0/extensions/Renameuser
+Extension:Replace Text                  1.4.1                                       /mnt/x/mediawiki-1.33.0/extensions/ReplaceText
+Extension:SpamBlacklist                                                             /mnt/x/mediawiki-1.33.0/extensions/SpamBlacklist
+Extension:SyntaxHighlight               2.0                                         /mnt/x/mediawiki-1.33.0/extensions/SyntaxHighlight_GeSHi
+Extension:TitleBlacklist                1.5.0                                       /mnt/x/mediawiki-1.33.0/extensions/TitleBlacklist
+Extension:WikiEditor                    0.5.2                                       /mnt/x/mediawiki-1.33.0/extensions/WikiEditor
+Skin:MonoBook                                                                       /mnt/x/mediawiki-1.33.0/skins/MonoBook
+Skin:Timeless                           0.8.1                                       /mnt/x/mediawiki-1.33.0/skins/Timeless
+Skin:Vector                                                                         /mnt/x/mediawiki-1.33.0/skins/Vector
 ```
 
 You may also query for a list of known extensions from [WMF MediaWiki site](https://www.mediawiki.org/).
