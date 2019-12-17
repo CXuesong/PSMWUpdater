@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json.Linq;
 
 namespace PSMWUpdater
@@ -22,6 +23,8 @@ namespace PSMWUpdater
 
         public IReadOnlyList<LocalExtensionInfo> InstalledSkins { get; private set; }
 
+        private static readonly Regex mwExtensionPageUrl = new Regex(@"https?://www\.mediawiki\.org/wiki/(Extension:|Skin:)(?<N>.+)", RegexOptions.IgnoreCase);
+
         private static LocalExtensionInfo SelectExtensionInfo(Cmdlet owner, ExtensionType type, string path)
         {
             var manifestName = type == ExtensionType.Extension ? "extension.json" : "skin.json";
@@ -32,8 +35,19 @@ namespace PSMWUpdater
                 return null;
             }
             var extensionManifest = JObject.Parse(File.ReadAllText(manifestPath));
-            // Some extensions, like CLDR, uses different folder name (Cldr)
-            var name = (string)extensionManifest["name"];
+
+            // Some extensions, like CLDR, uses different name as folder name (Cldr)
+            var url = (string)extensionManifest["url"];
+            var match = mwExtensionPageUrl.Match(url);
+            string name;
+            if (match.Success)
+            {
+                name = match.Groups["N"].Value.Replace('_', ' ');
+            }
+            else
+            {
+                name = (string)extensionManifest["name"];
+            }
             return new LocalExtensionInfo(new ExtensionName(string.IsNullOrEmpty(name) ? Path.GetFileName(path) : name, type), path);
         }
 
