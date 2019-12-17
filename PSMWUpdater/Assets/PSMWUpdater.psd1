@@ -12,7 +12,7 @@
 RootModule = 'PSMWUpdater.dll'
 
 # Version number of this module.
-ModuleVersion = '1.5.0'
+ModuleVersion = '1.6.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -101,7 +101,7 @@ PrivateData = @{
         Tags = @("mediawiki")
 
         # A URL to the license for this module.
-        LicenseUri = 'https://github.com/CXuesong/PSMWUpdater/blob/master/LICENSE.txt'
+        LicenseUri = 'https://github.com/CXuesong/PSMWUpdater/blob/master/LICENSE'
 
         # A URL to the main website for this project.
         ProjectUri = 'https://github.com/CXuesong/PSMWUpdater'
