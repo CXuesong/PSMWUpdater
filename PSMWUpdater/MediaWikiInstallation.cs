@@ -5,7 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 
 namespace PSMWUpdater
@@ -20,10 +23,6 @@ namespace PSMWUpdater
         }
 
         public string RootPath { get; }
-
-        public IReadOnlyList<LocalExtensionInfo> InstalledExtensions { get; private set; }
-
-        public IReadOnlyList<LocalExtensionInfo> InstalledSkins { get; private set; }
 
         private static readonly Regex mwExtensionPageUrl = new Regex(@"https?://www\.mediawiki\.org/wiki/(Extension:|Skin:)(?<N>.+)", RegexOptions.IgnoreCase);
 
@@ -80,12 +79,13 @@ namespace PSMWUpdater
             return new LocalExtensionInfo(new ExtensionName(string.IsNullOrEmpty(name) ? Path.GetFileName(path) : name, type), path, branch, version, revision, revisionTime);
         }
 
-        public void RefreshExtensions(Cmdlet owner)
+        public IList<LocalExtensionInfo> GetExtensions(Cmdlet owner)
         {
             var dirs = Directory.GetDirectories(Path.Combine(RootPath, "extensions"));
-            InstalledExtensions = dirs.Select((path, i) =>
+            return dirs.Select((path, i) =>
                 {
-                    owner.WriteProgress(new ProgressRecord(10, "Enumerate local MediaWiki extensions", $"Processed folders: {i + 1}/{dirs.Length}: {Path.GetFileName(path)}")
+                    owner.WriteProgress(new ProgressRecord(10, "Enumerate local MediaWiki extensions",
+                        $"Processed folders: {i + 1}/{dirs.Length}: {Path.GetFileName(path)}")
                     {
                         PercentComplete = (int)((i + 1) * 100.0 / dirs.Length)
                     });
@@ -95,10 +95,10 @@ namespace PSMWUpdater
                 .ToList();
         }
 
-        public void RefreshSkins(Cmdlet owner)
+        public IList<LocalExtensionInfo> GetSkins(Cmdlet owner)
         {
             var dirs = Directory.GetDirectories(Path.Combine(RootPath, "skins"));
-            InstalledSkins = dirs.Select((path, i) =>
+            return dirs.Select((path, i) =>
                 {
                     owner.WriteProgress(new ProgressRecord(10, "Enumerate local MediaWiki skins", $"Processed folders: {i + 1}/{dirs.Length}: {Path.GetFileName(path)}")
                     {
@@ -110,6 +110,69 @@ namespace PSMWUpdater
                 .ToList();
         }
 
+        private readonly Dictionary<string, Regex> variableValueRegexCache = new Dictionary<string, Regex>();
+
+        private static Regex BuildStringVariableValueRegex(string name)
+        {
+            return new Regex(@"\$" + name + @"\s*=\s*(['""])(?<V>([^\'""]|\\[\\rnvt'""])*)\1");
+        }
+
+        private string TryGetPhpVariableValue(string name, string expression)
+        {
+            if (!variableValueRegexCache.TryGetValue(name, out var matcher))
+                variableValueRegexCache.Add(name, matcher = BuildStringVariableValueRegex(name));
+            var match = matcher.Match(expression);
+            if (match.Success)
+                return match.Groups["V"].Value;
+            return null;
+        }
+
+        public async Task<LocalSiteInfo> GetSiteInfoAsync(Cmdlet owner, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            var info = new LocalSiteInfo();
+
+            async Task ParseSettingsPhpAsync(string localPath, bool required, int progressOffset, int progressLength)
+            {
+                var path = Path.Combine(RootPath, localPath);
+                var localProgress = new ProgressRecord(20, "Get local MediaWiki installation information.", "Load " + localPath)
+                {
+                    PercentComplete = progressOffset
+                };
+                if (!required && !File.Exists(path))
+                {
+                    owner.WriteWarning($"Cannot find {localPath}.");
+                    return;
+                }
+                using (var sr = File.OpenText(path))
+                {
+                    string line;
+                    while ((line = await sr.ReadLineAsync()) != null)
+                    {
+                        var percent = progressOffset + (int)((double)progressLength * sr.BaseStream.Position / sr.BaseStream.Length);
+                        if (localProgress.PercentComplete != percent)
+                        {
+                            localProgress.PercentComplete = percent;
+                            owner.WriteProgress(localProgress);
+                        }
+                        if (!line.Contains('$'))
+                            continue;
+                        var value = TryGetPhpVariableValue("wgSitename", line);
+                        if (value != null)
+                            info.SiteName = value;
+                        value = TryGetPhpVariableValue("wgVersion", line);
+                        if (value != null)
+                            info.Version = value;
+                    }
+                }
+            }
+
+            await ParseSettingsPhpAsync("includes/DefaultSettings.php", true, 0, 50);
+            await ParseSettingsPhpAsync("LocalSettings.php", false, 50, 50);
+
+            return info;
+        }
+
         public static bool CheckMwRootFolder(string path)
         {
             if (!File.Exists(Path.Combine(path, "index.php")))
@@ -118,7 +181,15 @@ namespace PSMWUpdater
                 return false;
             if (!Directory.Exists(Path.Combine(path, "skins")))
                 return false;
+            if (!Directory.Exists(Path.Combine(path, "includes")))
+                return false;
             return true;
+        }
+
+        internal static void AssertMwRootFolder(string path, string paramName)
+        {
+            if (!CheckMwRootFolder(path))
+                throw new ArgumentException("Specified path is not a valid MediaWiki installation.", paramName);
         }
 
         /// <inheritdoc />

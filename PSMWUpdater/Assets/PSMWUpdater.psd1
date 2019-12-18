@@ -75,6 +75,7 @@ FunctionsToExport = @()
 CmdletsToExport = @(
 "Get-MwExtension",
 "Get-MwExtensionBranch"
+"Get-MwSiteInfo"
 )
 
 # Variables to export from this module

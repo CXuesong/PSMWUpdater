@@ -78,7 +78,7 @@ namespace PSMWUpdater.Commands
                     if (filterType != ExtensionType.Unknown && name.Type != filterType)
                         continue;
                     WriteObject(SelectResult(new ExtensionInfo(name)));
-                    progress.PercentComplete = 60 + (int)(40.0*processedCount/names.Count);
+                    progress.PercentComplete = 60 + (int)(40.0 * processedCount / names.Count);
                     progress.StatusDescription = $"Outputting response: {processedCount}/{names.Count}";
                     WriteProgress(progress);
                 }
@@ -89,18 +89,15 @@ namespace PSMWUpdater.Commands
             else
             {
                 var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InstallationPath);
-                if (!MediaWikiInstallation.CheckMwRootFolder(resolvedPath))
-                    throw new ArgumentException("Specified path is not a valid MediaWiki installation.", nameof(InstallationPath));
+                MediaWikiInstallation.AssertMwRootFolder(resolvedPath, nameof(InstallationPath));
                 var installation = new MediaWikiInstallation(resolvedPath);
                 if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Extension)
                 {
-                    installation.RefreshExtensions(this);
-                    WriteObject(installation.InstalledExtensions.Select(SelectResult), true);
+                    WriteObject(installation.GetExtensions(this).Select(SelectResult), true);
                 }
                 if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Skin)
                 {
-                    installation.RefreshSkins(this);
-                    WriteObject(installation.InstalledSkins.Select(SelectResult), true);
+                    WriteObject(installation.GetSkins(this).Select(SelectResult), true);
                 }
             }
         }

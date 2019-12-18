@@ -153,4 +153,13 @@ namespace PSMWUpdater
 
     }
 
+    public class LocalSiteInfo
+    {
+
+        public string SiteName { get; set; }
+
+        public string Version { get; set; }
+
+    }
+
 }

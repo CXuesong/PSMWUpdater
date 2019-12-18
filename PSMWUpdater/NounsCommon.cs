@@ -11,5 +11,7 @@ namespace PSMWUpdater
 
         public const string MwExtensionBranch = "MwExtensionBranch";
 
+        public const string MwSiteInfo = "MwSiteInfo";
+
     }
 }
