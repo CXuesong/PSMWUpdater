@@ -11,7 +11,7 @@ namespace PSMWUpdater.Commands
 {
 
     /// <summary>
-    /// Gets a list of extensions either from a local MediaWiki installation or from WMF-registered MediaWiki extensions.
+    /// <para type="synopsis">Gets a list of extensions either from a local MediaWiki installation or from WMF-registered MediaWiki extensions.</para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, NounsCommon.MwExtension, DefaultParameterSetName = "Remote")]
     [OutputType(typeof(LocalExtensionInfo), ParameterSetName = new[] { "Local" })]
@@ -22,22 +22,22 @@ namespace PSMWUpdater.Commands
     {
 
         /// <summary>
-        /// If specified, gets all the extensions from the local MediaWiki installation in the specified path,
-        /// instead of retrieving known extensions from server.
+        /// <para type="description">If specified, gets all the extensions from the local MediaWiki installation in the specified path,
+        /// instead of retrieving known extensions from server.</para>
         /// </summary>
         [Parameter(Position = 0, Mandatory = true, ParameterSetName = "Local")]
         [Parameter(Position = 0, Mandatory = true, ParameterSetName = "LocalName")]
         public string InstallationPath { get; set; }
 
         /// <summary>
-        /// Return bare <see cref="ExtensionName"/> instead of <see cref="LocalExtensionInfo"/>-derived class.
+        /// <para type="description">Return bare <see cref="ExtensionName"/> instead of <see cref="LocalExtensionInfo"/>-derived class.</para>
         /// </summary>
         [Parameter(Mandatory = true, ParameterSetName = "LocalName")]
         [Parameter(Mandatory = true, ParameterSetName = "RemoteName")]
         public SwitchParameter BareName { get; set; }
 
         /// <summary>
-        /// Only list extensions of this type.
+        /// <para type="description">Only list extensions of this type.</para>
         /// </summary>
         [Parameter(ParameterSetName = "Local")]
         [Parameter(ParameterSetName = "Remote")]

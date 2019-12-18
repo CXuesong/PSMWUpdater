@@ -10,7 +10,9 @@ namespace PSMWUpdater.Commands
 {
 
     /// <summary>
+    /// <para type="synopsis">
     /// Gets the basic information of a MediaWiki installation.
+    /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, NounsCommon.MwSiteInfo)]
     [OutputType(typeof(LocalSiteInfo))]
@@ -18,7 +20,7 @@ namespace PSMWUpdater.Commands
     {
 
         /// <summary>
-        /// Specify the root of a local MediaWiki installation.
+        /// <para type="description">Specify the root of a local MediaWiki installation.</para>
         /// </summary>
         [Parameter(Position = 0, Mandatory = true, ValueFromPipeline = true)]
         public string InstallationPath { get; set; }
