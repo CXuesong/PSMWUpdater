@@ -127,12 +127,12 @@ namespace PSMWUpdater
             return null;
         }
 
-        public async Task<LocalSiteInfo> GetSiteInfoAsync(Cmdlet owner, CancellationToken ct)
+        public LocalSiteInfo GetSiteInfo(Cmdlet owner, CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
             var info = new LocalSiteInfo();
 
-            async Task ParseSettingsPhpAsync(string localPath, bool required, int progressOffset, int progressLength)
+            void ParseSettingsPhp(string localPath, bool required, int progressOffset, int progressLength)
             {
                 var path = Path.Combine(RootPath, localPath);
                 var localProgress = new ProgressRecord(20, "Get local MediaWiki installation information.", "Load " + localPath)
@@ -144,11 +144,13 @@ namespace PSMWUpdater
                     owner.WriteWarning($"Cannot find {localPath}.");
                     return;
                 }
+                ct.ThrowIfCancellationRequested();
                 using (var sr = File.OpenText(path))
                 {
                     string line;
-                    while ((line = await sr.ReadLineAsync()) != null)
+                    while ((line = sr.ReadLine()) != null)
                     {
+                        ct.ThrowIfCancellationRequested();
                         var percent = progressOffset + (int)((double)progressLength * sr.BaseStream.Position / sr.BaseStream.Length);
                         if (localProgress.PercentComplete != percent)
                         {
@@ -167,8 +169,8 @@ namespace PSMWUpdater
                 }
             }
 
-            await ParseSettingsPhpAsync("includes/DefaultSettings.php", true, 0, 50);
-            await ParseSettingsPhpAsync("LocalSettings.php", false, 50, 50);
+            ParseSettingsPhp("includes/DefaultSettings.php", true, 0, 50);
+            ParseSettingsPhp("LocalSettings.php", false, 50, 50);
 
             return info;
         }

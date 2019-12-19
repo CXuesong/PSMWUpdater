@@ -16,7 +16,7 @@ namespace PSMWUpdater.Commands
     /// </summary>
     [Cmdlet(VerbsCommon.Get, NounsCommon.MwSiteInfo)]
     [OutputType(typeof(LocalSiteInfo))]
-    public class GetMwSiteInfoCommand : PSAsyncCmdlet
+    public class GetMwSiteInfoCommand : PSSyncCmdlet
     {
 
         /// <summary>
@@ -26,15 +26,14 @@ namespace PSMWUpdater.Commands
         public string InstallationPath { get; set; }
 
         /// <inheritdoc />
-        protected override async Task ProcessRecordAsync(CancellationToken cancellationToken)
+        protected override void ProcessRecord()
         {
             var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InstallationPath);
             MediaWikiInstallation.AssertMwRootFolder(resolvedPath, nameof(InstallationPath));
             var installation = new MediaWikiInstallation(resolvedPath);
-            var info = await installation.GetSiteInfoAsync(this, cancellationToken);
+            var info = installation.GetSiteInfo(this, StopProcessingCancellationToken);
             WriteObject(info);
         }
-
     }
 
 }
