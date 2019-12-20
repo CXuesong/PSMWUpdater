@@ -133,6 +133,25 @@ namespace PSMWUpdater
     }
 
     /// <summary>
+    /// Contains information about an extension that is referred in <c>LocalSettings.php</c>.
+    /// </summary>
+    public class LocalSettingsExtensionInfo : ExtensionInfo
+    {
+
+        internal LocalSettingsExtensionInfo(ExtensionName name, int lineNumber, string localPath)
+            : base(name)
+        {
+            LineNumber = lineNumber;
+            LocalPath = localPath;
+        }
+
+        public int LineNumber { get; }
+
+        public string LocalPath { get; }
+
+    }
+
+    /// <summary>
     /// Describe a specific branch of an MediaWiki extension.
     /// </summary>
     public class ExtensionBranchInfo

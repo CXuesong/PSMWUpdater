@@ -175,6 +175,101 @@ namespace PSMWUpdater
             return info;
         }
 
+        public IEnumerable<LocalSettingsExtensionInfo> GetLocalSettingsExtensions(Cmdlet owner)
+        {
+            var localSettingsPath = Path.Combine(RootPath, "LocalSettings.php");
+            if (!File.Exists(localSettingsPath))
+            {
+                owner.WriteWarning($"{localSettingsPath} does not exist.");
+                return new LocalSettingsExtensionInfo[0];
+            }
+            return GetLocalSettingsExtensions(owner, localSettingsPath);
+        }
+
+        private static readonly Regex phpCommentLineMatcher = new Regex("^\\s*(#|//)");
+
+        private static readonly Regex loadExtensionSkinMatcher = new Regex("\\b(?<T>wfLoadExtension|wfLoadSkin)\\(\\s*(['\"])(?<N>([^\\'\"]|\\\\[\\\\rnvt'\"])+)\\1\\s*\\)");
+
+        private static readonly Regex requireOnceMatcher = new Regex("\\brequire_once\\( (['\"])(?<N>([^\\'\"]|\\\\[\\\\rnvt'\"])+)\\1 \\)");
+
+        private static readonly Regex requireOnceExtensionMatcher = new Regex("^\\s*\\$IP/(?<T>extensions|skins)/(?<N>[^/]+)/", RegexOptions.IgnoreCase);
+
+        private static string MakeExtensionPath(string rootPath, ExtensionName name)
+        {
+            return Path.Combine(rootPath, name.Type == ExtensionType.Extension ? "extensions" : "skins", name.Name);
+        }
+
+        public static IEnumerable<LocalSettingsExtensionInfo> GetLocalSettingsExtensions(Cmdlet owner, string fileName)
+        {
+            var knownExtensions = new HashSet<ExtensionName>();
+            var result = new List<LocalSettingsExtensionInfo>();
+            var rootPath = Path.GetFullPath(Path.Combine(fileName, ".."));
+            var lineNumber = 0;
+
+            void AddExtension(ExtensionName name)
+            {
+                if (knownExtensions.Add(name))
+                {
+                    result.Add(new LocalSettingsExtensionInfo(name, lineNumber, MakeExtensionPath(rootPath, name)));
+                }
+                else
+                {
+                    owner.WriteVerbose(string.Format("L{0}: Extension already seen: {1}.", lineNumber, name));
+                }
+            }
+            var progress = new ProgressRecord(10, "Parsing extension references.", "Load " + fileName);
+            owner.WriteProgress(progress);
+            foreach (var line in File.ReadLines(fileName))
+            {
+                lineNumber++;
+                if (!string.IsNullOrEmpty(line))
+                {
+                    if (phpCommentLineMatcher.IsMatch(line)) continue;
+                    var match = loadExtensionSkinMatcher.Match(line);
+                    if (match.Success)
+                    {
+                        AddExtension(new ExtensionName(match.Groups["N"].Value,
+                            "wfLoadExtension".Equals(match.Groups["T"].Value, StringComparison.OrdinalIgnoreCase)
+                                ? ExtensionType.Extension
+                                : ExtensionType.Skin));
+                    }
+                    match = requireOnceMatcher.Match(line);
+                    if (match.Success)
+                    {
+                        var path = match.Groups["N"].Value;
+                        var pathMatch = requireOnceExtensionMatcher.Match(path);
+                        if (pathMatch.Success)
+                        {
+                            AddExtension(new ExtensionName(match.Groups["N"].Value,
+                                "extensions".Equals(pathMatch.Groups["T"].Value, StringComparison.OrdinalIgnoreCase)
+                                    ? ExtensionType.Extension
+                                    : ExtensionType.Skin));
+                        }
+                        else
+                        {
+                            owner.WriteVerbose(string.Format("L{0}: Unrecognizable require_once call.", lineNumber));
+                        }
+                    }
+                }
+            }
+            progress.StatusDescription = "Outputting results.";
+            progress.PercentComplete = 50;
+            owner.WriteProgress(progress);
+            var outputtedItems = 0;
+            foreach (var item in result)
+            {
+                outputtedItems++;
+                yield return item;
+                var percent = 50 +(int) 50.0 * outputtedItems / result.Count;
+                if (percent != progress.PercentComplete)
+                {
+                    progress.PercentComplete = percent;
+                    progress.StatusDescription = $"Outputting results: {outputtedItems}/{result.Count}";
+                    owner.WriteProgress(progress);
+                }
+            }
+        }
+
         public static bool CheckMwRootFolder(string path)
         {
             if (!File.Exists(Path.Combine(path, "index.php")))
