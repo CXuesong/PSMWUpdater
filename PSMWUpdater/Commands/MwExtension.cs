@@ -103,8 +103,10 @@ namespace PSMWUpdater.Commands
         /// </summary>
         [Parameter(ParameterSetName = "Local")]
         [Parameter(ParameterSetName = "Remote")]
+        [Parameter(ParameterSetName = "LocalSettings")]
         [Parameter(ParameterSetName = "LocalName")]
         [Parameter(ParameterSetName = "RemoteName")]
+        [Parameter(ParameterSetName = "LocalSettingsName")]
         [ValidateSet("All", nameof(ExtensionType.Extension), nameof(ExtensionType.Skin), IgnoreCase = true)]
         public string Type { get; set; }
 
