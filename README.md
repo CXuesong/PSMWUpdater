@@ -2,9 +2,11 @@
 
 # PSMWUpdater
 
-This PowerShell Core Module provides helper cmdlets helping you to upgrade MediaWiki and its extensions.
+This PowerShell Core (PS 6+) Module provides helper cmdlets helping you to upgrade MediaWiki extensions (including skins). (Sorry, no support for updating MediaWiki itself, for now.)
 
 PowerShell Gallery: [PSMWUpdater](https://www.powershellgallery.com/packages/PSMWUpdater/) ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/PSMWUpdater?style=flat-square)
+
+If you come across any problem using this PowerShell Module, please open an issue or join the chat on gitter.
 
 ## Usage
 
@@ -24,7 +26,9 @@ Then import the module
 PS> Import-Module PSMWUpdater
 ```
 
-You can use the following command to explore the module and its cmdlets
+If there is no further error shown, you are now good to go.
+
+You can always use the following command to explore the module and its cmdlets. It provides the most detailed explanations and samples.
 
 ```powershell
 # Show all cmdlets
@@ -32,6 +36,23 @@ PS> Get-Command -Module PSMWUpdater
 # Show help for a cmdlet
 PS> Help Get-MwExtension
 ```
+
+### Quick recipe
+
+If you just want to get started downloading all the latest extensions really fast, try out the following one-liners:
+
+```powershell
+# Donwload tar file for Vector skin and Echo extension on latest REL branch
+PS> Get-MwExtensionBranch Vector, Echo | % { Invoke-WebRequest $_.Url }
+# Download tar files for all the latest REL branch of extensions (and skins) referred in LocalSettings.php
+PS> Get-MwExtension -LocalSettingsPath X:\mediawiki-1.33.0\LocalSettings.php -BareName | Get-MwExtensionBranch | % { Invoke-WebRequest $_.Url }
+# Download tar files for all the MASTER branch of extensions (and skins) that exist in the MediaWiki installation directory 
+PS> Get-MwExtension -InstallationPath X:\mediawiki-1.33.0\ -BareName | Get-MwExtensionBranch -Branch master | % { Invoke-WebRequest $_.Url }
+# Download tar files for all the REL1_34 branch of extensions (excluding skins) that exist in the MediaWiki installation directory 
+PS> Get-MwExtension -InstallationPath X:\mediawiki-1.33.0\ -Type Extension -BareName | Get-MwExtensionBranch -Branch REL1_34 | % { Invoke-WebRequest $_.Url }
+```
+
+Then you can just extract the tar files and place them in the suitable folders. Don't forget to run `update.php` after updating the extensions.
 
 ### Query for extensions and skins
 
