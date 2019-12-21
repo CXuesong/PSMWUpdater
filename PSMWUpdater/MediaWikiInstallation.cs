@@ -186,13 +186,13 @@ namespace PSMWUpdater
             return GetLocalSettingsExtensions(owner, localSettingsPath);
         }
 
-        private static readonly Regex phpCommentLineMatcher = new Regex("^\\s*(#|//)");
+        private static readonly Regex phpCommentLineMatcher = new Regex(@"^\s*(#|//)");
 
-        private static readonly Regex loadExtensionSkinMatcher = new Regex("\\b(?<T>wfLoadExtension|wfLoadSkin)\\(\\s*(['\"])(?<N>([^\\'\"]|\\\\[\\\\rnvt'\"])+)\\1\\s*\\)");
+        private static readonly Regex loadExtensionSkinMatcher = new Regex(@"\b(?<T>wfLoadExtension|wfLoadSkin)\(\s*(['""])(?<N>([^\'""]|\\[\\rnvt'""])+)\1\s*\)");
 
-        private static readonly Regex requireOnceMatcher = new Regex("\\brequire_once\\( (['\"])(?<N>([^\\'\"]|\\\\[\\\\rnvt'\"])+)\\1 \\)");
+        private static readonly Regex requireOnceMatcher = new Regex(@"\brequire_once\s*(\()?\s*(['""])(?<N>([^ \'""]|\\[\\rnvt'""])+)\2\s*(\))?");
 
-        private static readonly Regex requireOnceExtensionMatcher = new Regex("^\\s*\\$IP/(?<T>extensions|skins)/(?<N>[^/]+)/", RegexOptions.IgnoreCase);
+        private static readonly Regex requireOnceExtensionMatcher = new Regex(@"^\s*\$IP/(?<T>extensions|skins)/(?<N>[^/]+)/", RegexOptions.IgnoreCase);
 
         private static string MakeExtensionPath(string rootPath, ExtensionName name)
         {
