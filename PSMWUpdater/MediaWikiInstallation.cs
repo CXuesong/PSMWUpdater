@@ -240,7 +240,7 @@ namespace PSMWUpdater
                         var pathMatch = requireOnceExtensionMatcher.Match(path);
                         if (pathMatch.Success)
                         {
-                            AddExtension(new ExtensionName(match.Groups["N"].Value,
+                            AddExtension(new ExtensionName(pathMatch.Groups["N"].Value,
                                 "extensions".Equals(pathMatch.Groups["T"].Value, StringComparison.OrdinalIgnoreCase)
                                     ? ExtensionType.Extension
                                     : ExtensionType.Skin));
