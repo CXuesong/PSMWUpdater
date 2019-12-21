@@ -43,13 +43,13 @@ If you just want to get started downloading all the latest extensions really fas
 
 ```powershell
 # Donwload tar file for Vector skin and Echo extension on latest REL branch
-PS> Get-MwExtensionBranch Vector, Echo | % { Invoke-WebRequest $_.Url }
+PS> Get-MwExtensionBranch Vector, Echo | % { wget $_.Url }
 # Download tar files for all the latest REL branch of extensions (and skins) referred in LocalSettings.php
-PS> Get-MwExtension -LocalSettingsPath X:\mediawiki-1.33.0\LocalSettings.php -BareName | Get-MwExtensionBranch | % { Invoke-WebRequest $_.Url }
+PS> Get-MwExtension -LocalSettingsPath X:\mediawiki-1.33.0\LocalSettings.php -BareName | Get-MwExtensionBranch | % { wget $_.Url }
 # Download tar files for all the MASTER branch of extensions (and skins) that exist in the MediaWiki installation directory 
-PS> Get-MwExtension -InstallationPath X:\mediawiki-1.33.0\ -BareName | Get-MwExtensionBranch -Branch master | % { Invoke-WebRequest $_.Url }
+PS> Get-MwExtension -InstallationPath X:\mediawiki-1.33.0\ -BareName | Get-MwExtensionBranch -Branch master | % { wget $_.Url }
 # Download tar files for all the REL1_34 branch of extensions (excluding skins) that exist in the MediaWiki installation directory 
-PS> Get-MwExtension -InstallationPath X:\mediawiki-1.33.0\ -Type Extension -BareName | Get-MwExtensionBranch -Branch REL1_34 | % { Invoke-WebRequest $_.Url }
+PS> Get-MwExtension -InstallationPath X:\mediawiki-1.33.0\ -Type Extension -BareName | Get-MwExtensionBranch -Branch REL1_34 | % { wget $_.Url }
 ```
 
 Then you can just extract the tar files and place them in the suitable folders. Don't forget to run `update.php` after updating the extensions.
