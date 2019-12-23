@@ -11,8 +11,8 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>MediaWiki</PackageTags>
     <PackageReleaseNotes>See https://github.com/CXuesong/PSMWUpdater/releases .</PackageReleaseNotes>
-    <AssemblyVersion>1.9.2</AssemblyVersion>
-    <FileVersion>1.9.2</FileVersion>
+    <AssemblyVersion>1.9.3</AssemblyVersion>
+    <FileVersion>1.9.3</FileVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
