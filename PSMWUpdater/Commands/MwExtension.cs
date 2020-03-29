@@ -115,7 +115,7 @@ namespace PSMWUpdater.Commands
         {
             var filterType = Type == null || "All".Equals(Type, StringComparison.OrdinalIgnoreCase)
                 ? ExtensionType.Unknown
-                : (ExtensionType)Enum.Parse(typeof(ExtensionType), Type, true);
+                : (ExtensionType) Enum.Parse(typeof(ExtensionType), Type, true);
 
             object SelectResult(ExtensionInfo e)
             {
@@ -128,62 +128,59 @@ namespace PSMWUpdater.Commands
             {
                 case "Remote":
                 case "RemoteName":
+                {
+                    var progress = new ProgressRecord(1, "Get MediaWiki extension inventory", "Connecting to server.");
+                    WriteProgress(progress);
+                    var site = await AmbientServices.GetExtensionProviderSiteAsync();
+                    progress.StatusDescription = "Fetching extensions.";
+                    progress.PercentComplete = 30;
+                    WriteProgress(progress);
+                    var names = await site.GetKnownExtensionsAsync(cancellationToken);
+                    progress.StatusDescription = "Processing response.";
+                    progress.PercentComplete = 60;
+                    WriteProgress(progress);
+                    var processedCount = 0;
+                    foreach (var name in names)
                     {
-                        var progress = new ProgressRecord(1, "Get MediaWiki extension inventory", "Connecting to server.");
-                        WriteProgress(progress);
-                        var site = await AmbientServices.GetExtensionProviderSiteAsync();
-                        progress.StatusDescription = "Fetching extensions.";
-                        progress.PercentComplete = 30;
-                        WriteProgress(progress);
-                        var names = await site.GetKnownExtensionsAsync(cancellationToken);
-                        progress.StatusDescription = "Processing response.";
-                        progress.PercentComplete = 60;
-                        WriteProgress(progress);
-                        var processedCount = 0;
-                        foreach (var name in names)
-                        {
-                            processedCount++;
-                            if (filterType != ExtensionType.Unknown && name.Type != filterType)
-                                continue;
-                            WriteObject(SelectResult(new ExtensionInfo(name)));
-                            progress.PercentComplete = 60 + (int)(40.0 * processedCount / names.Count);
-                            progress.StatusDescription = $"Outputting response: {processedCount}/{names.Count}";
-                            WriteProgress(progress);
-                        }
-                        progress.StatusDescription = "Completed.";
-                        progress.PercentComplete = 100;
+                        processedCount++;
+                        if (filterType != ExtensionType.Unknown && name.Type != filterType)
+                            continue;
+                        WriteObject(SelectResult(new ExtensionInfo(name)));
+                        progress.PercentComplete = 60 + (int) (40.0 * processedCount / names.Count);
+                        progress.StatusDescription = $"Outputting response: {processedCount}/{names.Count}";
                         WriteProgress(progress);
                     }
+                    progress.StatusDescription = "Completed.";
+                    progress.PercentComplete = 100;
+                    WriteProgress(progress);
+                }
                     break;
                 case "Local":
                 case "LocalName":
+                {
+                    var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InstallationPath);
+                    MediaWikiInstallation.AssertMwRootFolder(resolvedPath, nameof(InstallationPath));
+                    var installation = new MediaWikiInstallation(resolvedPath);
+                    if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Extension)
                     {
-                        var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(InstallationPath);
-                        MediaWikiInstallation.AssertMwRootFolder(resolvedPath, nameof(InstallationPath));
-                        var installation = new MediaWikiInstallation(resolvedPath);
-                        if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Extension)
-                        {
-                            WriteObject(installation.GetExtensions(this).Select(SelectResult), true);
-                        }
-                        if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Skin)
-                        {
-                            WriteObject(installation.GetSkins(this).Select(SelectResult), true);
-                        }
+                        WriteObject(installation.GetExtensions(this).Select(SelectResult), true);
                     }
+                    if (filterType == ExtensionType.Unknown || filterType == ExtensionType.Skin)
+                    {
+                        WriteObject(installation.GetSkins(this).Select(SelectResult), true);
+                    }
+                }
                     break;
                 case "LocalSettings":
                 case "LocalSettingsName":
-                    {
-                        var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(LocalSettingsPath);
-                        if (Directory.Exists(resolvedPath))
-                            resolvedPath = Path.Combine(resolvedPath, "LocalSettings.php");
-                        foreach (var extension in MediaWikiInstallation.GetLocalSettingsExtensions(this, resolvedPath))
-                        {
-                            if (filterType != ExtensionType.Unknown && filterType != extension.Name.Type)
-                                continue;
-                            WriteObject(SelectResult(extension));
-                        }
-                    }
+                {
+                    var resolvedPath = SessionState.Path.GetUnresolvedProviderPathFromPSPath(LocalSettingsPath);
+                    if (Directory.Exists(resolvedPath))
+                        resolvedPath = Path.Combine(resolvedPath, "LocalSettings.php");
+                    WriteObject(MediaWikiInstallation.GetLocalSettingsExtensions(this, resolvedPath)
+                        .Where(e => filterType == ExtensionType.Unknown || filterType == e.Name.Type)
+                        .Select(SelectResult), true);
+                }
                     break;
             }
         }
