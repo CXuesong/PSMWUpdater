@@ -12,7 +12,7 @@
 RootModule = 'PSMWUpdater.dll'
 
 # Version number of this module.
-ModuleVersion = '1.9.3'
+ModuleVersion = '1.9.4'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -27,7 +27,7 @@ Author = 'CXuesong'
 CompanyName = 'CXuesong'
 
 # Copyright statement for this module
-Copyright = '2019 (c) CXuesong. All rights reserved.'
+Copyright = '2020 (c) CXuesong. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'Provides helper cmdlets for upgrading MediaWiki and its extensions.'
